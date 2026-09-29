@@ -1,0 +1,57 @@
+// product-service owns this schema exclusively. Create migrations only with
+// `npx prisma migrate dev --name <snake_case_name>` and never edit one that is on main.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductType {
+  harvest
+  input
+  equipment
+}
+
+enum ProductStatus {
+  active
+  inactive
+  discontinued
+}
+
+model Product {
+  id                    String        @id @db.Uuid
+  sku                   String        @unique @db.VarChar(64)
+  name                  String        @db.VarChar(200)
+  description           String?
+  category              String        @db.VarChar(100)
+  productType           ProductType   @map("product_type")
+  scientificName        String?       @map("scientific_name") @db.VarChar(200)
+  activeIngredient      String?       @map("active_ingredient") @db.VarChar(200)
+  safetyPeriodDays      Int?          @map("safety_period_days")
+  isHazardous           Boolean       @default(false) @map("is_hazardous")
+  unitOfMeasure         String        @map("unit_of_measure") @db.VarChar(20)
+  presentationSize      Decimal?      @map("presentation_size") @db.Decimal(12, 3)
+  presentationUnit      String?       @map("presentation_unit") @db.VarChar(20)
+  costPrice             Decimal       @map("cost_price") @db.Decimal(12, 2)
+  sellingPrice          Decimal       @map("selling_price") @db.Decimal(12, 2)
+  taxRate               Decimal       @default(0) @map("tax_rate") @db.Decimal(5, 2)
+  minStockLevel         Int           @default(0) @map("min_stock_level")
+  maxStockLevel         Int?          @map("max_stock_level")
+  reorderPoint          Int           @default(0) @map("reorder_point")
+  requiresBatchTracking Boolean       @default(false) @map("requires_batch_tracking")
+  requiresExpiration    Boolean       @default(false) @map("requires_expiration")
+  storageConditions     String?       @map("storage_conditions")
+  status                ProductStatus @default(active)
+  createdAt             DateTime      @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime      @map("updated_at") @db.Timestamptz(3)
+
+  @@index([category])
+  @@index([productType])
+  @@index([status])
+  @@map("products")
+}
