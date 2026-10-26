@@ -23,7 +23,7 @@ Rules that keep the entity valid:
 
 ## Errors and Status Codes
 
-`HttpExceptionFilter` catches everything and returns `{ statusCode, message, errors? }`. The frontend reads `message`.
+`HttpExceptionFilter` catches everything and returns `{ statusCode, message, errors? }`. The dashboard reads `message`.
 
 | Source | Status |
 |---|---|
@@ -73,6 +73,7 @@ DATABASE_URL=postgresql://...?schema=product npm run test:e2e   # real Postgres,
 ```
 
 - `test/support/jest.setup.ts` sets the env before any import, because `AppModule` validates the env when it is loaded. It never overrides a variable that is already set.
+- **Known flakiness:** one `npm test` run in five failed a unit test once (2026-10-25) and passed on three reruns; the test name wasn't captured. If it recurs, record the name before rerunning.
 - The e2e suite runs `deleteMany()` on the products table before each test. Point it only at a disposable database. It refuses to run with the placeholder `DATABASE_URL`.
 
 ## Environment

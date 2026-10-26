@@ -20,17 +20,19 @@ It is built with **NestJS 11**, **TypeScript** (strict) and **PostgreSQL** (Pris
 
 ## 🌐 Place in the AgriOps Platform
 
-AgriOps is made of independent services, each in its own repository with its own CI/CD:
+AgriOps is made of five independent apps and services, each in its own repository with its own CI/CD:
 
-| Service | Stack | Role |
-|---|---|---|
-| [auth-service](https://github.com/AgricultureOperations/auth-service) | Express 5 + TypeScript + SQLite | Users, login, JWT issuance |
-| [order-service](https://github.com/AgricultureOperations/order-service) | ASP.NET Core (.NET 9) + PostgreSQL | JWT-protected order CRUD |
-| **product-service** (this repo) | NestJS 11 + Prisma + PostgreSQL | JWT-protected product catalog CRUD |
-| [agriops-web](https://github.com/AgricultureOperations/frontend) | React 18 + Vite | Back-office SPA |
+| App / service | Repository | Stack | Role |
+|---|---|---|---|
+| auth-service | [edwardcruzcruz/typescript-jwt-auth-api](https://github.com/edwardcruzcruz/typescript-jwt-auth-api) | Express 5 + TypeScript + SQLite | Login, JWT issuance, users, roles & permissions (RBAC), customers |
+| order-service | [edwardcruzcruz/order-service](https://github.com/edwardcruzcruz/order-service) | ASP.NET Core (.NET 9) + PostgreSQL | Sales orders: lines, status workflow, soft delete, yearly order numbering |
+| **product-service** (this repo) | [AgricultureOperations/product-service](https://github.com/AgricultureOperations/product-service) | NestJS 11 + Prisma + PostgreSQL | Product catalog (inputs, harvest, equipment) |
+| dashboard | [edwardcruzcruz/agriops-web](https://github.com/edwardcruzcruz/agriops-web) | React 18 + Vite | Internal back office (staff) for every backend |
+| frontend | not on GitHub yet | Next.js 16, static export | Public customer portal: signup, login, account |
 
 ```
-frontend ──(login/register, users)──▶ auth-service     ──issues JWT──┐
+frontend (portal) ──(register, login, me)──▶ auth-service
+dashboard ──(login, users)──────────▶ auth-service     ──issues JWT──┐
     │                                                                │ shared secret/issuer/audience
     ├──(Bearer JWT, orders)──────────▶ order-service   ◀─validates───┤
     └──(Bearer JWT, products)────────▶ product-service ◀─validates───┘
@@ -217,13 +219,13 @@ Example request:
 
 ### Errors
 
-Every error has the same body. The frontend reads `message`:
+Every error has the same body. The dashboard reads `message`:
 
 ```json
 { "statusCode": 400, "message": "costPrice must not be less than 0; productType must be one of the following values: harvest, input, equipment", "errors": ["costPrice must not be less than 0", "productType must be one of the following values: harvest, input, equipment"] }
 ```
 
-A missing, malformed, expired or wrongly signed token returns **401** (never 403), so the frontend's 401 interceptor logs the user out.
+A missing, malformed, expired or wrongly signed token returns **401** (never 403), so the dashboard's 401 interceptor logs the user out.
 
 ---
 
@@ -330,7 +332,7 @@ docker run -p 3001:3001 \
 
 ### Full stack with docker compose
 
-The workspace root's `docker-compose.yml` runs postgres, auth-service, order-service, product-service and the frontend. It builds `DATABASE_URL` and the JWT values from the **root `.env`** only.
+The workspace root's `docker-compose.yml` runs postgres, auth-service, order-service, product-service, the dashboard and the customer portal. It builds `DATABASE_URL` and the JWT values from the **root `.env`** only.
 
 ```bash
 # from the workspace root
@@ -380,9 +382,9 @@ On Render, set `DATABASE_URL`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE` and `F
 - Read [`CLAUDE.md`](./CLAUDE.md) first. It describes the layering, the error contract, commands and migration rules for this service.
 - Keep `domain` free of framework imports. Register every new port, adapter and use case in `src/product.module.ts`.
 - Every use case and domain rule needs a unit test. Every new endpoint needs a controller integration test.
-- Keep every route under `/api/v1/`. A breaking change to a request or response shape needs a new version (`/api/v2/...`) served alongside v1, because the frontend (Netlify) and this service (Render) deploy independently.
+- Keep every route under `/api/v1/`. A breaking change to a request or response shape needs a new version (`/api/v2/...`) served alongside v1, because the dashboard (Netlify) and this service (Render) deploy independently.
 - Status codes are part of the contract: 401 only for "not authenticated", 403 for "not allowed", 404 for missing resources, 409 for conflicts, 400 for validation errors. Error bodies carry `message`.
-- Changing the response shape requires a matching change to the frontend mirror (`src/features/products/interfaces/` in the agriops-web repo) and its Playwright mock (`tests/fixtures/product-service.ts`), with coordinated deploys.
+- Changing the response shape requires a matching change to the dashboard mirror (`src/features/products/interfaces/` in the dashboard repo) and its Playwright mock (`tests/fixtures/product-service.ts`), with coordinated deploys.
 
 ---
 
